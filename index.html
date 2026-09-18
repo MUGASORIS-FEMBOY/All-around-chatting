@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MUGS Chat Network</title>
+<style>
+:root{--bg:#17181c;--panel:#202228;--panel2:#2b2d33;--text:#e7e9ed;--muted:#9aa0aa;--accent:#27e36a;--danger:#ed4c5c;--border:#3a3d45}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,Segoe UI,sans-serif;height:100vh;overflow:hidden}
+#app{display:grid;grid-template-columns:72px 230px 1fr 270px;height:100vh}
+nav,.sidebar,.right{background:var(--panel)}nav{padding:12px;display:flex;align-items:center;flex-direction:column;gap:10px}.logo{width:48px;height:48px;border-radius:16px;background:var(--accent);color:#111;display:grid;place-items:center;font-weight:900}.navbtn{width:44px;height:44px;border:0;border-radius:12px;background:var(--panel2);color:var(--text);cursor:pointer}.navbtn:hover{outline:1px solid var(--accent)}
+.sidebar{border-left:1px solid var(--border);border-right:1px solid var(--border);display:flex;flex-direction:column}.head{height:54px;padding:0 14px;display:flex;align-items:center;border-bottom:1px solid var(--border);font-weight:800}.channels{padding:12px;overflow:auto;flex:1}.cat{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;margin:10px 5px 6px}.row{padding:9px 10px;border-radius:7px;color:var(--muted);cursor:pointer}.row:hover,.row.active{background:var(--panel2);color:#fff}.footer{padding:10px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center}.dot{width:9px;height:9px;border-radius:50%;background:#777}.dot.ok{background:var(--accent)}
+main{display:flex;flex-direction:column;min-width:0}.top{height:54px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;font-weight:800}.top small{margin-left:8px;color:var(--muted);font-weight:400}.messages{flex:1;overflow:auto;padding:18px}.msg{display:flex;gap:10px;margin:0 0 18px}.avatar{width:38px;height:38px;border-radius:50%;background:#3b3e46;object-fit:cover;flex:none}.meta{display:flex;gap:8px;align-items:baseline}.name{font-weight:800}.time{color:var(--muted);font-size:11px}.body{margin-top:3px;white-space:pre-wrap;overflow-wrap:anywhere}.attach{margin-top:7px;padding:9px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;display:inline-block}.composer{padding:12px 16px 16px}.compose{display:flex;gap:8px;background:var(--panel2);padding:8px;border-radius:9px}.compose input{flex:1;background:transparent;border:0;outline:0;color:#fff;padding:7px}.compose button,.add{border:0;border-radius:7px;padding:8px 11px;background:var(--accent);color:#111;font-weight:800;cursor:pointer}.right{border-left:1px solid var(--border);padding:14px;overflow:auto}.card{background:var(--panel2);padding:11px;border-radius:8px;margin-bottom:10px}.muted{color:var(--muted)}input,textarea{background:#181a1f;color:#fff;border:1px solid var(--border);border-radius:6px;padding:8px;width:100%;outline:0}.stack{display:flex;gap:6px}.stack>*{min-width:0}.status{padding:8px;border-radius:7px;background:#181a1f;margin-top:8px;font-size:12px}.good{color:var(--accent)}.bad{color:var(--danger)}.modal{position:fixed;inset:0;background:#0009;display:none;place-items:center;padding:20px}.modal.open{display:grid}.dialog{width:min(760px,100%);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px}.log{font:12px ui-monospace,monospace;background:#111318;padding:10px;border-radius:7px;max-height:300px;overflow:auto;white-space:pre-wrap}
+@media(max-width:900px){#app{grid-template-columns:58px 190px 1fr}.right{display:none}}@media(max-width:650px){#app{grid-template-columns:54px 1fr}.sidebar{display:none}}
+</style>
+</head>
+<body>
+<div id="app">
+<nav><div class="logo">M</div><button class="navbtn" id="diagBtn" title="Diagnostics">⚙</button></nav>
+<section class="sidebar">
+ <div class="head">MUGS NETWORK</div>
+ <div class="channels">
+  <div class="cat">Main Server</div><div class="row active" id="mainRoom">🌎 # global-sync-room</div>
+  <div class="cat">Groups</div><div id="groups"></div>
+  <div class="cat">Friends</div><div id="friends"></div>
+ </div>
+ <div class="footer"><span class="dot" id="presenceDot"></span><div style="min-width:0"><b id="meName">Loading…</b><div class="muted" id="meId">—</div></div></div>
+</section>
+<main>
+ <div class="top"># <span id="roomTitle">global-sync-room</span><small id="connection">Starting…</small></div>
+ <div class="messages" id="messages"></div>
+ <div class="composer"><div class="compose"><input id="message" placeholder="Message #global-sync-room"><button id="send">Send</button><button id="fileBtn">＋</button><input id="file" type="file" hidden></div></div>
+</main>
+<aside class="right">
+ <div class="card"><b>Your Device</b><div class="muted" id="deviceToken" style="margin-top:5px;word-break:break-all">—</div></div>
+ <div class="card"><b>Add a friend</b><div class="stack" style="margin-top:8px"><input id="friendToken" placeholder="MUGS-XXXX-XXXX"><button class="add" id="addFriend">Add</button></div><div class="muted" style="font-size:11px;margin-top:7px">The other person must share their token with you.</div></div>
+ <div class="card"><b>Connection</b><div id="quickStatus" class="status">Waiting for backend…</div></div>
+</aside>
+</div>
+<div class="modal" id="modal"><div class="dialog">
+ <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Network Diagnostics</h2><button class="navbtn" id="closeDiag">×</button></div>
+ <p class="muted">This test does not bypass network controls. It reports exactly which permitted connection stage succeeds or fails.</p>
+ <button class="add" id="runDiag">Run full test</button>
+ <div class="log" id="log" style="margin-top:12px"></div>
+</div></div>
+<script>
+const CONFIG={BACKEND_URL:"__BACKEND_URL__"};
+const state={device:null,room:"main",ws:null,connected:false,log:[]};
+const $=id=>document.getElementById(id);
+function log(msg,kind=""){const line=`[${new Date().toLocaleTimeString()}] ${msg}`;state.log.push(line);$("log").textContent=state.log.join("\n");}
+function token(){let x=localStorage.getItem("mugs_device_token");if(!x){const a=crypto.getRandomValues(new Uint32Array(2));x=`MUGS-${a[0].toString(36).slice(-4).toUpperCase()}-${a[1].toString(36).slice(-4).toUpperCase()}`;localStorage.setItem("mugs_device_token",x)}return x}
+function load(){let d=JSON.parse(localStorage.getItem("mugs_profile")||"null");if(!d)d={token:token(),name:"mug"};d.token=d.token||token();localStorage.setItem("mugs_profile",JSON.stringify(d));state.device=d;$("meName").textContent=d.name;$("meId").textContent=d.token;$("deviceToken").textContent=d.token}
+function render(msg){const el=document.createElement("div");el.className="msg";const av=document.createElement("div");av.className="avatar";const content=document.createElement("div");const meta=document.createElement("div");meta.className="meta";meta.innerHTML=`<span class="name"></span><span class="time"></span>`;meta.querySelector(".name").textContent=msg.name||"Unknown";meta.querySelector(".time").textContent=msg.time||"";const body=document.createElement("div");body.className="body";body.textContent=msg.text||"";content.append(meta,body);el.append(av,content);$("messages").append(el);$("messages").scrollTop=$("messages").scrollHeight}
+function setConn(text,ok=false){$("connection").textContent=text;$("quickStatus").textContent=text;$("presenceDot").className="dot"+(ok?" ok":"")}
+function wsUrl(){if(!CONFIG.BACKEND_URL||CONFIG.BACKEND_URL.startsWith("__"))return null;return CONFIG.BACKEND_URL.replace(/^http/,"ws")+"/ws?token="+encodeURIComponent(state.device.token)}
+function connect(){const u=wsUrl();if(!u){setConn("Backend not configured");return}log("Opening WebSocket…");try{state.ws=new WebSocket(u);state.ws.onopen=()=>{state.connected=true;setConn("Connected",true);log("WebSocket connected.")};state.ws.onmessage=e=>{try{const p=JSON.parse(e.data);if(p.type==="message")render(p.message)}catch(err){log("Received malformed server data.")}};state.ws.onerror=()=>{state.connected=false;setConn("WebSocket error");log("WebSocket error. Check backend URL, browser console, and network access.")};state.ws.onclose=e=>{state.connected=false;setConn("Disconnected");log(`WebSocket closed (code ${e.code}).`)}}catch(e){log("WebSocket creation failed: "+e.message)}}
+function send(text){if(!text)return;const msg={name:state.device.name,text,time:new Date().toLocaleTimeString()};render(msg);if(state.ws?.readyState===1)state.ws.send(JSON.stringify({type:"message",room:state.room,message:msg}));else log("Message shown locally; backend connection is not active.")}
+$("send").onclick=()=>{send($("message").value.trim());$("message").value=""};$("message").onkeydown=e=>{if(e.key==="Enter")$("send").click()};$("fileBtn").onclick=()=>$("file").click();$("file").onchange=()=>{const f=$("file").files[0];if(f){if(f.size>5*1024*1024){log("File is over the starter 5 MB client limit.");return}send(`Shared file: ${f.name} (${Math.ceil(f.size/1024)} KB)`)}};
+$("addFriend").onclick=()=>{const t=$("friendToken").value.trim().toUpperCase();if(!/^MUGS-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(t)){log("Invalid MUGS token format.");return}if(state.ws?.readyState===1){state.ws.send(JSON.stringify({type:"friend_request",target:t}));log("Friend request sent to "+t)}else log("Cannot send friend request while disconnected.")};
+$("diagBtn").onclick=()=>{$("modal").classList.add("open");$("log").textContent=state.log.join("\n")};$("closeDiag").onclick=()=>{$("modal").classList.remove("open")};
+$("runDiag").onclick=async()=>{state.log=[];log("MUGS diagnostic started.");log("1. JavaScript: OK");log("2. Secure context: "+(location.protocol==="https:"?"OK":"FAIL — host this site over HTTPS"));log("3. WebSocket API: "+("WebSocket"in window?"OK":"FAIL"));log("4. Device token: "+(state.device?.token?"OK":"FAIL"));if(!CONFIG.BACKEND_URL||CONFIG.BACKEND_URL.startsWith("__")){log("5. Backend URL: FAIL — configure __BACKEND_URL__ in index.html.");return}log("5. Backend URL configured: OK");try{const r=await fetch(CONFIG.BACKEND_URL+"/health",{cache:"no-store"});log("6. HTTPS backend: "+(r.ok?"OK":"FAIL ("+r.status+")"));const j=await r.json();log("7. Backend response: "+(j.ok?"OK":"FAIL"));}catch(e){log("6. HTTPS backend: FAIL — "+e.message);log("7. WebSocket cannot be meaningfully tested until HTTPS backend is reachable.")}};
+load();connect();
+</script>
+</body>
+</html>
