@@ -1,3 +1,14 @@
+MUGS Zero-Cost v2.1
+- Added password-protected accounts with salted PBKDF2-SHA-256 password hashes.
+- Added account signup and multi-device sign-in; chat now requires an account.
+- Made new server ownership account-based so it carries across devices.
+- Renamed the client-facing group controls to private servers.
+- Fixed cross-Durable-Object identity and group authorization, which prevented
+  registered devices from joining a room in the original archive.
+- Split the schema so rooms store messages only, reducing free-tier overhead.
+- Added a two-messages-per-second per-connection server-side rate limit.
+- Documented Free-plan quota behavior and the no-payment deployment rule.
+
 MUGS Free-Plan v2
 - Persistent SQLite-backed room history.
 - Hibernatable WebSockets.

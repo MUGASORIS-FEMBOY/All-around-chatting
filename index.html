@@ -27,11 +27,11 @@ button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);bac
     <button onclick="connectNow()" title="Reconnect">↻</button>
   </aside>
   <aside class="sidebar">
-    <div class="sidehead"><span>MUGS</span><button onclick="newGroup()">＋</button></div>
+    <div class="sidehead"><span>MUGS</span><button onclick="newGroup()" title="Create server">＋</button></div>
     <div class="channels">
       <div class="section">Server</div>
       <div class="channel active" id="mainChannel" onclick="selectRoom('main')"># main</div>
-      <div class="section">Groups</div>
+      <div class="section">Servers</div>
       <div id="groupList"></div>
     </div>
   </aside>
@@ -57,13 +57,13 @@ button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);bac
       <h3>Quick actions</h3>
       <div class="actions">
         <button onclick="openSettings()">Profile</button>
-        <button onclick="newGroup()">New group</button>
+        <button onclick="newGroup()">Create server</button>
         <button onclick="openDebug()">Diagnostics</button>
       </div>
     </div>
     <div class="card">
-      <h3>Group tools</h3>
-      <p class="small">Open a group, then use Invite to add another registered MUGS device by token.</p>
+      <h3>Server tools</h3>
+      <p class="small">Create a server, then use Invite to add another signed-in MUGS device by token.</p>
       <button onclick="inviteToCurrentGroup()">Invite device</button>
     </div>
     <div class="card">
@@ -78,13 +78,17 @@ button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);bac
   <div class="form">
     <label>Username<input id="nameInput" maxlength="32"></label>
     <label>Device name<input id="deviceInput" maxlength="48"></label>
+    <label>Account username<input id="accountInput" maxlength="24" autocomplete="username" placeholder="letters, numbers, underscores"></label>
+    <label>Password<input id="passwordInput" type="password" minlength="10" maxlength="128" autocomplete="current-password" placeholder="10+ characters"></label>
     <label>Backend URL<input id="backendInput" placeholder="https://your-worker.workers.dev"></label>
     <div class="actions">
       <button onclick="saveSettings()">Save</button>
+      <button onclick="signUp()">Create account</button>
+      <button onclick="signIn()">Sign in</button>
       <button onclick="copyToken()">Copy device token</button>
       <button onclick="resetToken()">Generate new token</button>
     </div>
-    <p class="small">Your device token is a bearer credential. Treat it like a password. Anyone who has it can act as that device.</p>
+    <p class="small">Create an account once, then sign in with the same username and password on other devices. Passwords are never stored in the browser. Your device token is still a session credential—keep it private.</p>
   </div>
 </div></div>
 
@@ -96,13 +100,13 @@ button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);bac
 
 <script>
 const STORAGE='mugs_free_v2';
-const state={token:'',profile:{name:'mug',device:'Browser Device'},backend:'',room:'main',groups:[],ws:null,connected:false,seq:0};
+const state={token:'',profile:{name:'mug',device:'Browser Device'},account:'',backend:'',room:'main',groups:[],ws:null,connected:false,seq:0};
 
 function $(id){return document.getElementById(id)}
 function log(s){const t=new Date().toLocaleTimeString();$('log').textContent=(`[${t}] ${s}\n`+$('log').textContent).slice(0,12000)}
-function saveLocal(){localStorage.setItem(STORAGE,JSON.stringify({token:state.token,profile:state.profile,backend:state.backend}))}
+function saveLocal(){localStorage.setItem(STORAGE,JSON.stringify({token:state.token,profile:state.profile,account:state.account,backend:state.backend}))}
 function loadLocal(){
-  try{const x=JSON.parse(localStorage.getItem(STORAGE)||'{}');state.token=x.token||'';state.profile={...state.profile,...(x.profile||{})};state.backend=x.backend||''}catch{}
+  try{const x=JSON.parse(localStorage.getItem(STORAGE)||'{}');state.token=x.token||'';state.profile={...state.profile,...(x.profile||{})};state.account=x.account||'';state.backend=x.backend||''}catch{}
   if(!state.token)state.token=crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','');
   $('username').textContent=state.profile.name;$('deviceName').textContent=state.profile.device;$('tokenShort').textContent=state.token.slice(0,8)+'…';
 }
@@ -180,18 +184,27 @@ function renderGroups(){
   })
 }
 async function newGroup(){
-  const name=prompt('Group name?');if(!name)return;
+  const name=prompt('New server name?');if(!name)return;
   try{const d=await api('/api/groups',{method:'POST',body:JSON.stringify({name})});state.groups.push(d.group);renderGroups();await selectRoom(d.group.id)}
   catch(e){alert('Could not create group: '+e.message)}
 }
 async function inviteToCurrentGroup(){
-  if(state.room==='main'){alert('Open a group first.');return}
-  const token=prompt('Paste the other registered device token:');if(!token)return;
+  if(state.room==='main'){alert('Open a server first.');return}
+  const token=prompt('Paste the other signed-in device token:');if(!token)return;
   try{await api('/api/groups/'+encodeURIComponent(state.room)+'/members',{method:'POST',body:JSON.stringify({token})});alert('Device added to the group.')}
   catch(e){alert('Invite failed: '+e.message)}
 }
-function openSettings(){$('nameInput').value=state.profile.name;$('deviceInput').value=state.profile.device;$('backendInput').value=state.backend;openModal('settingsModal')}
+function openSettings(){$('nameInput').value=state.profile.name;$('deviceInput').value=state.profile.device;$('accountInput').value=state.account;$('passwordInput').value='';$('backendInput').value=state.backend;openModal('settingsModal')}
 function saveSettings(){state.profile.name=$('nameInput').value.trim()||'mug';state.profile.device=$('deviceInput').value.trim()||'Browser Device';state.backend=$('backendInput').value.trim().replace(/\/+$/,'');saveLocal();loadLocal();closeModal('settingsModal');connectNow();refreshGroups()}
+async function accountAction(path){
+  const username=$('accountInput').value.trim().toLowerCase(),password=$('passwordInput').value;
+  if(!username||!password){alert('Enter an account username and password.');return}
+  state.profile.name=$('nameInput').value.trim()||username;state.profile.device=$('deviceInput').value.trim()||'Browser Device';state.backend=$('backendInput').value.trim().replace(/\/+$/,'');saveLocal();
+  try{const d=await api(path,{method:'POST',body:JSON.stringify({username,password,name:state.profile.name,device:state.profile.device})});state.account=d.account.username;saveLocal();$('passwordInput').value='';alert(path.endsWith('signup')?'Account created.':'Signed in.');closeModal('settingsModal');connectNow();refreshGroups()}
+  catch(e){alert('Account error: '+e.message)}
+}
+function signUp(){accountAction('/api/account/signup')}
+function signIn(){accountAction('/api/account/login')}
 function resetToken(){if(confirm('Generate a new device token? Your old token will no longer identify this browser.')){state.token=crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','');saveLocal();loadLocal();connectNow()}}
 async function copyToken(){try{await navigator.clipboard.writeText(state.token);alert('Token copied. Keep it private.')}catch{alert(state.token)}}
 function openDebug(){openModal('debugModal');runDiagnostics()}

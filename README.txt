@@ -1,4 +1,4 @@
-MUGS CHAT NETWORK — FREE-PLAN EDITION v2
+MUGS CHAT NETWORK — ZERO-COST EDITION v2.1
 ============================================
 
 This package is designed around the current Cloudflare Workers Free plan:
@@ -8,26 +8,67 @@ This package is designed around the current Cloudflare Workers Free plan:
 - Hibernatable WebSockets to reduce idle duration usage
 - No terminal required for the basic browser/dashboard workflow
 
+ZERO-COST PROMISE
+-----------------
+Deploy this only on the Workers Free plan and GitHub Pages. Do not select
+Workers Paid, add a payment method, buy a domain, or connect any paid add-on.
+The Free plan stops the affected operation when a quota is exhausted; it does
+not convert this project into a paid deployment automatically.
+
+As verified on 2026-09-18, Cloudflare Free includes SQLite-backed Durable
+Objects. Its limits include 100,000 Durable Object requests/day, 13,000
+GB-seconds/day of duration, 5 million SQLite row reads/day, 100,000 row
+writes/day, and 5 GB total Durable Object storage. This is a small-community
+chat app, not unlimited free hosting. Limits can change, so confirm them in
+Cloudflare's official pricing page before deploying.
+
 FEATURES
 --------
 * Automatic main room
-* Persistent device token
-* Device/profile registration
+* Username and password accounts (signup and multi-device sign-in)
+* Persistent per-device session token
+* Device/profile registration tied to a signed-in account
 * Real-time WebSocket chat
 * Persistent recent message history
-* User-created groups
-* Group membership/invites by device token
+* User-created private servers
+* Server membership/invites by device token
 * Friend system by device token
 * Online/offline presence
 * Reconnect and diagnostics
 * Server-side message limits
 * Automatic trimming of old room messages
 * Separate Durable Object instances for rooms
+* Rate limit of two messages per second per connection
 
 FREE-PLAN DESIGN
 ----------------
 The code intentionally avoids paid-only Durable Object storage modes and is
 built for SQLite-backed Durable Objects.
+
+IMPORTANT v2.1 FIX
+------------------
+The original v2 archive put user/group data in one Durable Object and room
+messages in different Durable Objects, but had each room look for users in its
+own empty database. That prevented registered users from opening WebSockets.
+This version verifies identity and group membership in the system object, then
+passes the verified identity to the private room-object request. It also keeps
+room databases to message data only, reducing free-tier storage overhead.
+
+ACCOUNTS AND SERVERS
+--------------------
+Open Settings on the website and enter an account username (3-24 lowercase
+letters, numbers, or underscores) and a password of at least 10 characters.
+Choose Create account. On a second browser/device, use the same fields and
+choose Sign in; this creates a separate device session for that account.
+
+After signing in, select Create server. The account that creates it remains
+the owner even when it signs in from another device. Open the server and use
+Invite device to add a friend's signed-in device token.
+
+Passwords are salted and hashed with PBKDF2-SHA-256 in the Worker before
+storage. They are not saved to browser local storage. This is a starter
+authentication system: use HTTPS (the default for Pages and Workers) and do
+not reuse a valuable password.
 
 Cloudflare's current documentation should be checked before deployment because
 limits can change. This version is designed to stay within the Free-plan

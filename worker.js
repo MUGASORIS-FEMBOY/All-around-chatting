@@ -4,6 +4,10 @@ const MAX_TEXT = 2000;
 const MAX_GROUPS_PER_OWNER = 100;
 const MAX_HISTORY = 50;
 const MAX_ROOM_MESSAGES = 500;
+const MESSAGE_INTERVAL_MS = 500;
+const PASSWORD_MIN_LENGTH = 10;
+const PASSWORD_MAX_LENGTH = 128;
+const PBKDF2_ITERATIONS = 150000;
 
 function json(data, status=200, extra={}) {
   return new Response(JSON.stringify(data), {
@@ -21,6 +25,17 @@ function json(data, status=200, extra={}) {
 function clean(v,max){return String(v??"").trim().slice(0,max)}
 function validToken(t){return /^[a-f0-9]{40,80}$/i.test(String(t||""))}
 function roomId(v){return clean(v,64).replace(/[^a-zA-Z0-9_-]/g,"").toLowerCase()||"main"}
+function accountName(v){return clean(v,24).toLowerCase()}
+function validAccountName(v){return /^[a-z0-9_]{3,24}$/.test(v)}
+function validPassword(v){return typeof v==="string" && v.length>=PASSWORD_MIN_LENGTH && v.length<=PASSWORD_MAX_LENGTH}
+function bytesToBase64(bytes){return btoa(String.fromCharCode(...bytes))}
+function base64ToBytes(value){return Uint8Array.from(atob(value),c=>c.charCodeAt(0))}
+async function passwordHash(password,salt){
+  const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveBits"]);
+  const bits=await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt,iterations:PBKDF2_ITERATIONS},key,256);
+  return new Uint8Array(bits);
+}
+function equalBytes(a,b){if(a.length!==b.length)return false;let diff=0;for(let i=0;i<a.length;i++)diff|=a[i]^b[i];return diff===0}
 
 export default {
   async fetch(request, env) {
@@ -61,22 +76,31 @@ export default {
       if (!validToken(token)) return json({error:"Invalid device token"},401);
 
       const system = env.MUGS_DO.get(env.MUGS_DO.idFromName("system"));
-      const check = await system.fetch("https://mugs.internal/auth/check", {
+      const check = await system.fetch("https://mugs.internal/auth/room-access?room="+encodeURIComponent(room), {
         method:"POST",
         headers:{"X-MUGS-Token":token},
         body:"{}"
       });
       if (!check.ok) return check;
+      const access = await check.json();
 
       const rdo = env.MUGS_DO.get(env.MUGS_DO.idFromName("room:"+room));
+      const headers = new Headers(request.headers);
+      // Room Durable Objects have separate databases. The system object is the
+      // authority for identities and group membership, so pass its verified
+      // identity through this private Worker-to-Object request.
+      headers.set("X-MUGS-Token", token);
+      headers.set("X-MUGS-Name", access.user.name);
+      headers.set("X-MUGS-Device", access.user.device);
       return rdo.fetch(new Request(
         "https://mugs.internal/ws?room="+encodeURIComponent(room)+"&token="+encodeURIComponent(token),
-        request
+        {method:request.method, headers}
       ));
     }
 
     const token = request.headers.get("X-MUGS-Token") || "";
-    if (url.pathname.startsWith("/api/") && !validToken(token))
+    const publicAccountRoute=["/api/account/signup","/api/account/login"].includes(url.pathname);
+    if (url.pathname.startsWith("/api/") && !publicAccountRoute && !validToken(token))
       return json({error:"Missing or invalid X-MUGS-Token"},401);
 
     if (url.pathname.startsWith("/api/")) {
@@ -100,7 +124,6 @@ export class MUGS_DO extends DurableObject {
     super(ctx, env);
     this.ctx=ctx;
     this.env=env;
-    this.ensureSchema();
     this.sessions=new Map();
     for (const ws of this.ctx.getWebSockets()) {
       const a=ws.deserializeAttachment();
@@ -113,8 +136,14 @@ export class MUGS_DO extends DurableObject {
     } catch {}
   }
 
-  ensureSchema() {
+  ensureSystemSchema() {
     try {
+      this.ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS accounts (
+        username TEXT PRIMARY KEY,
+        password_hash TEXT NOT NULL,
+        password_salt TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      )`);
       this.ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS users (
         token TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -141,6 +170,22 @@ export class MUGS_DO extends DurableObject {
         created_at INTEGER NOT NULL,
         PRIMARY KEY(group_id,token)
       )`);
+      this.ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS account_devices (
+        token TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      )`);
+      this.ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS group_owners (
+        group_id TEXT PRIMARY KEY,
+        username TEXT NOT NULL
+      )`);
+    } catch(e) {
+      console.log("system schema:", e?.message || e);
+    }
+  }
+
+  ensureRoomSchema() {
+    try {
       this.ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS messages (
         id TEXT PRIMARY KEY,
         room TEXT NOT NULL,
@@ -151,12 +196,17 @@ export class MUGS_DO extends DurableObject {
       )`);
       this.ctx.storage.sql.exec(`CREATE INDEX IF NOT EXISTS messages_room_ts ON messages(room,ts)`);
     } catch(e) {
-      console.log("schema:", e?.message || e);
+      console.log("room schema:", e?.message || e);
     }
   }
 
   async fetch(request) {
     const url=new URL(request.url);
+
+    if(url.pathname.startsWith("/auth/") || url.pathname.startsWith("/api/"))
+      this.ensureSystemSchema();
+    if(url.pathname==="/room-history" || url.pathname==="/ws")
+      this.ensureRoomSchema();
 
     if(url.pathname==="/auth/check"){
       const token=request.headers.get("X-MUGS-Token")||"";
@@ -164,6 +214,66 @@ export class MUGS_DO extends DurableObject {
         `SELECT token,name,device FROM users WHERE token=?`,token
       ).toArray()[0];
       return u ? json({ok:true,user:u}) : json({error:"Unknown device token"},401);
+    }
+
+    if(url.pathname==="/auth/room-access" && request.method==="POST"){
+      const token=request.headers.get("X-MUGS-Token")||"";
+      const room=roomId(url.searchParams.get("room")||"main");
+      const user=this.ctx.storage.sql.exec(
+        `SELECT token,name,device FROM users WHERE token=?`,token
+      ).toArray()[0];
+      if(!user) return json({error:"Unknown device token"},401);
+      const account=this.ctx.storage.sql.exec(
+        `SELECT username FROM account_devices WHERE token=?`,token
+      ).toArray()[0];
+      if(!account) return json({error:"Sign up or sign in before joining chat"},401);
+      if(room!=="main"){
+        const member=this.ctx.storage.sql.exec(
+          `SELECT token FROM members WHERE group_id=? AND token=?`,room,token
+        ).toArray()[0];
+        if(!member) return json({error:"Not a member of this group"},403);
+      }
+      return json({ok:true,user});
+    }
+
+    if(url.pathname==="/api/account/signup" && request.method==="POST"){
+      const token=request.headers.get("X-MUGS-Token")||"";
+      const body=await request.json().catch(()=>({}));
+      const username=accountName(body.username);
+      const password=body.password;
+      if(!validToken(token)) return json({error:"Invalid device session"},401);
+      if(!validAccountName(username)) return json({error:"Username must be 3-24 letters, numbers, or underscores"},400);
+      if(!validPassword(password)) return json({error:`Password must be ${PASSWORD_MIN_LENGTH}-${PASSWORD_MAX_LENGTH} characters`},400);
+      const linked=this.ctx.storage.sql.exec(`SELECT username FROM account_devices WHERE token=?`,token).toArray()[0];
+      if(linked) return json({error:"This browser is already signed in. Generate a new device token to create another account."},409);
+      const existing=this.ctx.storage.sql.exec(`SELECT username FROM accounts WHERE username=?`,username).toArray()[0];
+      if(existing) return json({error:"That username is already taken"},409);
+      const salt=crypto.getRandomValues(new Uint8Array(16));
+      const hash=await passwordHash(password,salt);
+      const now=Date.now();
+      const name=clean(body.name,32)||username;
+      const device=clean(body.device,48)||"Browser Device";
+      this.ctx.storage.sql.exec(`INSERT INTO accounts(username,password_hash,password_salt,created_at) VALUES(?,?,?,?)`,username,bytesToBase64(hash),bytesToBase64(salt),now);
+      this.ctx.storage.sql.exec(`INSERT INTO account_devices(token,username,created_at) VALUES(?,?,?)`,token,username,now);
+      this.ctx.storage.sql.exec(`INSERT INTO users(token,name,device,created_at,last_seen) VALUES(?,?,?,?,?) ON CONFLICT(token) DO UPDATE SET name=excluded.name,device=excluded.device,last_seen=excluded.last_seen`,token,name,device,now,now);
+      return json({ok:true,account:{username},user:{token,name,device}},201);
+    }
+
+    if(url.pathname==="/api/account/login" && request.method==="POST"){
+      const token=request.headers.get("X-MUGS-Token")||"";
+      const body=await request.json().catch(()=>({}));
+      const username=accountName(body.username);
+      if(!validToken(token)||!validAccountName(username)||typeof body.password!=="string") return json({error:"Invalid username or password"},401);
+      const account=this.ctx.storage.sql.exec(`SELECT username,password_hash,password_salt FROM accounts WHERE username=?`,username).toArray()[0];
+      if(!account) return json({error:"Invalid username or password"},401);
+      const actual=await passwordHash(body.password,base64ToBytes(account.password_salt));
+      if(!equalBytes(actual,base64ToBytes(account.password_hash))) return json({error:"Invalid username or password"},401);
+      const now=Date.now();
+      const name=clean(body.name,32)||username;
+      const device=clean(body.device,48)||"Browser Device";
+      this.ctx.storage.sql.exec(`INSERT INTO account_devices(token,username,created_at) VALUES(?,?,?) ON CONFLICT(token) DO UPDATE SET username=excluded.username`,token,username,now);
+      this.ctx.storage.sql.exec(`INSERT INTO users(token,name,device,created_at,last_seen) VALUES(?,?,?,?,?) ON CONFLICT(token) DO UPDATE SET name=excluded.name,device=excluded.device,last_seen=excluded.last_seen`,token,name,device,now,now);
+      return json({ok:true,account:{username},user:{token,name,device}});
     }
 
     if(url.pathname==="/api/register" && request.method==="POST"){
@@ -174,6 +284,9 @@ export class MUGS_DO extends DurableObject {
       const device=clean(body.device,48)||"Browser Device";
       const now=Date.now();
 
+      const account=this.ctx.storage.sql.exec(`SELECT username FROM account_devices WHERE token=?`,token).toArray()[0];
+      if(!account) return json({error:"Sign up or sign in before joining chat"},403);
+
       this.ctx.storage.sql.exec(
         `INSERT INTO users(token,name,device,created_at,last_seen)
          VALUES(?,?,?,?,?)
@@ -181,7 +294,7 @@ export class MUGS_DO extends DurableObject {
          name=excluded.name,device=excluded.device,last_seen=excluded.last_seen`,
         token,name,device,now,now
       );
-      return json({ok:true,user:{token,name,device}});
+      return json({ok:true,user:{token,name,device},account});
     }
 
     if(url.pathname==="/api/groups" && request.method==="GET"){
@@ -204,6 +317,10 @@ export class MUGS_DO extends DurableObject {
         `SELECT token FROM users WHERE token=?`,token
       ).toArray()[0];
       if(!u) return json({error:"Register this device first"},403);
+      const account=this.ctx.storage.sql.exec(
+        `SELECT username FROM account_devices WHERE token=?`,token
+      ).toArray()[0];
+      if(!account) return json({error:"Sign in before creating a server"},403);
 
       const count=this.ctx.storage.sql.exec(
         `SELECT COUNT(*) AS c FROM groups WHERE owner=?`,token
@@ -222,8 +339,12 @@ export class MUGS_DO extends DurableObject {
         `INSERT INTO members(group_id,token,created_at) VALUES(?,?,?)`,
         id,token,now
       );
+      this.ctx.storage.sql.exec(
+        `INSERT INTO group_owners(group_id,username) VALUES(?,?)`,
+        id,account.username
+      );
 
-      return json({ok:true,group:{id,name,owner:token,created_at:now}},201);
+      return json({ok:true,group:{id,name,owner:account.username,created_at:now}},201);
     }
 
     const memberMatch=url.pathname.match(/^\/api\/groups\/([^/]+)\/members$/);
@@ -233,9 +354,12 @@ export class MUGS_DO extends DurableObject {
       const body=await request.json().catch(()=>({}));
       const other=String(body.token||"").trim();
 
-      const g=this.ctx.storage.sql.exec(
-        `SELECT id FROM groups WHERE id=? AND owner=?`,group,owner
+      const account=this.ctx.storage.sql.exec(
+        `SELECT username FROM account_devices WHERE token=?`,owner
       ).toArray()[0];
+      const g=account ? this.ctx.storage.sql.exec(
+        `SELECT g.id FROM groups g JOIN group_owners o ON o.group_id=g.id WHERE g.id=? AND o.username=?`,group,account.username
+      ).toArray()[0] : undefined;
       if(!g) return json({error:"Only the group owner can invite devices"},403);
       if(!validToken(other)) return json({error:"Invalid target token"},400);
 
@@ -330,31 +454,20 @@ export class MUGS_DO extends DurableObject {
 
     if(!validToken(token)) return json({error:"Invalid token"},401);
 
-    const user=this.ctx.storage.sql.exec(
-      `SELECT token,name,device FROM users WHERE token=?`,token
-    ).toArray()[0];
-    if(!user) return json({error:"Unknown device token"},401);
-
-    if(room!=="main"){
-      const member=this.ctx.storage.sql.exec(
-        `SELECT token FROM members WHERE group_id=? AND token=?`,room,token
-      ).toArray()[0];
-      if(!member) return json({error:"Not a member of this group"},403);
-    }
+    const name=clean(request.headers.get("X-MUGS-Name"),32);
+    const device=clean(request.headers.get("X-MUGS-Device"),48);
+    if(!name || !device) return json({error:"WebSocket must use the MUGS gateway"},403);
 
     const pair=new WebSocketPair();
     const [client,server]=Object.values(pair);
 
     this.ctx.acceptWebSocket(server,[room]);
-    const attachment={token,name:user.name,device:user.device,room};
+    const attachment={token,name,device,room,lastMessageAt:0};
     server.serializeAttachment(attachment);
     this.sessions.set(server,attachment);
 
     this.ctx.storage.sql.exec(
-      `UPDATE users SET last_seen=? WHERE token=?`,Date.now(),token
-    );
-
-    this.broadcast(room,{type:"presence",online:true,name:user.name,room},server);
+    this.broadcast(room,{type:"presence",online:true,name,room},server);
     server.send(JSON.stringify({
       type:"ready",room,online:this.ctx.getWebSockets(room).length
     }));
@@ -381,6 +494,10 @@ export class MUGS_DO extends DurableObject {
     if(!text) return;
 
     const now=Date.now();
+    if(now-Number(s.lastMessageAt||0)<MESSAGE_INTERVAL_MS)
+      return this.sendError(ws,"Please wait before sending another message");
+    s.lastMessageAt=now;
+    ws.serializeAttachment(s);
     const id=crypto.randomUUID();
 
     this.ctx.storage.sql.exec(
