@@ -1,13 +1,20 @@
 {
-  "name": "mugs-chat-backend",
+  "$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+  "name": "mugs-chat-free",
   "main": "worker.js",
   "compatibility_date": "2026-09-18",
   "durable_objects": {
     "bindings": [
-      { "name": "CHAT_ROOM", "class_name": "CHAT_ROOM" }
+      {
+        "name": "MUGS_DO",
+        "class_name": "MUGS_DO"
+      }
     ]
   },
   "migrations": [
-    { "new_sqlite_classes": ["CHAT_ROOM"] }
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["MUGS_DO"]
+    }
   ]
 }

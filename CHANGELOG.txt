@@ -1,0 +1,11 @@
+MUGS Free-Plan v2
+- Persistent SQLite-backed room history.
+- Hibernatable WebSockets.
+- Automatic device registration.
+- Main room available automatically.
+- Groups with owner invitations by device token.
+- Friend records.
+- Presence.
+- Health/debug endpoints.
+- Client-side diagnostics.
+- Free-plan-oriented storage and traffic limits.

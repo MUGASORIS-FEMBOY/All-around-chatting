@@ -3,62 +3,208 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111318">
 <title>MUGS Chat Network</title>
 <style>
-:root{--bg:#17181c;--panel:#202228;--panel2:#2b2d33;--text:#e7e9ed;--muted:#9aa0aa;--accent:#27e36a;--danger:#ed4c5c;--border:#3a3d45}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,Segoe UI,sans-serif;height:100vh;overflow:hidden}
-#app{display:grid;grid-template-columns:72px 230px 1fr 270px;height:100vh}
-nav,.sidebar,.right{background:var(--panel)}nav{padding:12px;display:flex;align-items:center;flex-direction:column;gap:10px}.logo{width:48px;height:48px;border-radius:16px;background:var(--accent);color:#111;display:grid;place-items:center;font-weight:900}.navbtn{width:44px;height:44px;border:0;border-radius:12px;background:var(--panel2);color:var(--text);cursor:pointer}.navbtn:hover{outline:1px solid var(--accent)}
-.sidebar{border-left:1px solid var(--border);border-right:1px solid var(--border);display:flex;flex-direction:column}.head{height:54px;padding:0 14px;display:flex;align-items:center;border-bottom:1px solid var(--border);font-weight:800}.channels{padding:12px;overflow:auto;flex:1}.cat{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;margin:10px 5px 6px}.row{padding:9px 10px;border-radius:7px;color:var(--muted);cursor:pointer}.row:hover,.row.active{background:var(--panel2);color:#fff}.footer{padding:10px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center}.dot{width:9px;height:9px;border-radius:50%;background:#777}.dot.ok{background:var(--accent)}
-main{display:flex;flex-direction:column;min-width:0}.top{height:54px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;font-weight:800}.top small{margin-left:8px;color:var(--muted);font-weight:400}.messages{flex:1;overflow:auto;padding:18px}.msg{display:flex;gap:10px;margin:0 0 18px}.avatar{width:38px;height:38px;border-radius:50%;background:#3b3e46;object-fit:cover;flex:none}.meta{display:flex;gap:8px;align-items:baseline}.name{font-weight:800}.time{color:var(--muted);font-size:11px}.body{margin-top:3px;white-space:pre-wrap;overflow-wrap:anywhere}.attach{margin-top:7px;padding:9px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;display:inline-block}.composer{padding:12px 16px 16px}.compose{display:flex;gap:8px;background:var(--panel2);padding:8px;border-radius:9px}.compose input{flex:1;background:transparent;border:0;outline:0;color:#fff;padding:7px}.compose button,.add{border:0;border-radius:7px;padding:8px 11px;background:var(--accent);color:#111;font-weight:800;cursor:pointer}.right{border-left:1px solid var(--border);padding:14px;overflow:auto}.card{background:var(--panel2);padding:11px;border-radius:8px;margin-bottom:10px}.muted{color:var(--muted)}input,textarea{background:#181a1f;color:#fff;border:1px solid var(--border);border-radius:6px;padding:8px;width:100%;outline:0}.stack{display:flex;gap:6px}.stack>*{min-width:0}.status{padding:8px;border-radius:7px;background:#181a1f;margin-top:8px;font-size:12px}.good{color:var(--accent)}.bad{color:var(--danger)}.modal{position:fixed;inset:0;background:#0009;display:none;place-items:center;padding:20px}.modal.open{display:grid}.dialog{width:min(760px,100%);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px}.log{font:12px ui-monospace,monospace;background:#111318;padding:10px;border-radius:7px;max-height:300px;overflow:auto;white-space:pre-wrap}
-@media(max-width:900px){#app{grid-template-columns:58px 190px 1fr}.right{display:none}}@media(max-width:650px){#app{grid-template-columns:54px 1fr}.sidebar{display:none}}
+:root{--bg:#0d0f12;--panel:#15181d;--panel2:#1b1f26;--line:#2b3038;--text:#eef1f5;--muted:#9aa3af;--accent:#54f36b;--danger:#ff5d6c;--warn:#ffd45a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif;height:100vh;overflow:hidden}
+button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:8px;padding:9px 12px}button:hover{filter:brightness(1.12)}
+.app{display:grid;grid-template-columns:70px 220px 1fr 250px;height:100vh}.rail{background:#090b0e;border-right:1px solid var(--line);padding:10px;display:flex;flex-direction:column;gap:10px}.logo{height:48px;border-radius:14px;background:var(--accent);color:#071008;display:grid;place-items:center;font-weight:900;font-size:20px}.rail button{width:48px;height:48px;padding:0}.rail .spacer{flex:1}
+.sidebar,.right{background:var(--panel);border-right:1px solid var(--line);min-width:0}.right{border-left:1px solid var(--line);border-right:0;padding:14px;overflow:auto}.sidehead{height:62px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-weight:800}.channels{padding:12px}.section{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin:10px 8px}.channel{padding:10px 12px;border-radius:7px;color:#b7bec8;margin:3px 0}.channel.active,.channel:hover{background:var(--panel2);color:#fff}.main{display:flex;flex-direction:column;min-width:0}.top{height:62px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:0 16px}.status{margin-left:auto;color:var(--muted);font-size:12px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#777;margin-right:6px}.dot.ok{background:var(--accent)}.dot.bad{background:var(--danger)}.dot.warn{background:var(--warn)}
+.messages{flex:1;overflow:auto;padding:18px}.msg{margin:0 0 14px;max-width:900px}.meta{font-size:12px;color:var(--muted);margin-bottom:3px}.body{white-space:pre-wrap;word-break:break-word}.system{color:var(--muted);font-style:italic}
+.composer{border-top:1px solid var(--line);padding:12px;display:flex;gap:8px}.composer input{flex:1;background:var(--panel);border:1px solid var(--line);color:#fff;border-radius:8px;padding:11px}.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}.card h3{margin:0 0 8px;font-size:14px}.kv{display:flex;justify-content:space-between;gap:10px;color:var(--muted);margin:5px 0}.kv b{color:#fff;text-align:right;overflow:hidden;text-overflow:ellipsis}.small{font-size:12px;color:var(--muted);line-height:1.45}.log{max-height:230px;overflow:auto;background:#090b0e;border-radius:8px;padding:8px;font:11px ui-monospace,monospace;white-space:pre-wrap}
+.modal{position:fixed;inset:0;background:#0009;display:none;place-items:center;padding:20px;z-index:20}.modal.open{display:grid}.modalbox{width:min(720px,100%);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}.modalhead{display:flex;justify-content:space-between;align-items:center}.form{display:grid;gap:9px}.form input{background:#0b0d10;border:1px solid var(--line);color:#fff;border-radius:8px;padding:10px}.actions{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:900px){.app{grid-template-columns:58px 1fr}.sidebar{display:none}.right{display:none}.rail button{width:40px;height:40px}.logo{height:40px}.top{padding:0 10px}.messages{padding:12px}}
 </style>
 </head>
 <body>
-<div id="app">
-<nav><div class="logo">M</div><button class="navbtn" id="diagBtn" title="Diagnostics">⚙</button></nav>
-<section class="sidebar">
- <div class="head">MUGS NETWORK</div>
- <div class="channels">
-  <div class="cat">Main Server</div><div class="row active" id="mainRoom">🌎 # global-sync-room</div>
-  <div class="cat">Groups</div><div id="groups"></div>
-  <div class="cat">Friends</div><div id="friends"></div>
- </div>
- <div class="footer"><span class="dot" id="presenceDot"></span><div style="min-width:0"><b id="meName">Loading…</b><div class="muted" id="meId">—</div></div></div>
-</section>
-<main>
- <div class="top"># <span id="roomTitle">global-sync-room</span><small id="connection">Starting…</small></div>
- <div class="messages" id="messages"></div>
- <div class="composer"><div class="compose"><input id="message" placeholder="Message #global-sync-room"><button id="send">Send</button><button id="fileBtn">＋</button><input id="file" type="file" hidden></div></div>
-</main>
-<aside class="right">
- <div class="card"><b>Your Device</b><div class="muted" id="deviceToken" style="margin-top:5px;word-break:break-all">—</div></div>
- <div class="card"><b>Add a friend</b><div class="stack" style="margin-top:8px"><input id="friendToken" placeholder="MUGS-XXXX-XXXX"><button class="add" id="addFriend">Add</button></div><div class="muted" style="font-size:11px;margin-top:7px">The other person must share their token with you.</div></div>
- <div class="card"><b>Connection</b><div id="quickStatus" class="status">Waiting for backend…</div></div>
-</aside>
+<div class="app">
+  <aside class="rail">
+    <div class="logo">M</div>
+    <button onclick="openSettings()" title="Settings">⚙</button>
+    <button onclick="openDebug()" title="Diagnostics">⌁</button>
+    <div class="spacer"></div>
+    <button onclick="connectNow()" title="Reconnect">↻</button>
+  </aside>
+  <aside class="sidebar">
+    <div class="sidehead"><span>MUGS</span><button onclick="newGroup()">＋</button></div>
+    <div class="channels">
+      <div class="section">Server</div>
+      <div class="channel active" id="mainChannel" onclick="selectRoom('main')"># main</div>
+      <div class="section">Groups</div>
+      <div id="groupList"></div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <strong id="roomTitle"># main</strong>
+      <span class="status"><span id="dot" class="dot warn"></span><span id="status">Starting…</span></span>
+    </div>
+    <div id="messages" class="messages"></div>
+    <div class="composer">
+      <input id="messageInput" maxlength="2000" placeholder="Message MUGS…" onkeydown="if(event.key==='Enter')sendMessage()">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </main>
+  <aside class="right">
+    <div class="card">
+      <h3>Device</h3>
+      <div class="kv"><span>Name</span><b id="deviceName">—</b></div>
+      <div class="kv"><span>User</span><b id="username">—</b></div>
+      <div class="kv"><span>Token</span><b id="tokenShort">—</b></div>
+    </div>
+    <div class="card">
+      <h3>Quick actions</h3>
+      <div class="actions">
+        <button onclick="openSettings()">Profile</button>
+        <button onclick="newGroup()">New group</button>
+        <button onclick="openDebug()">Diagnostics</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Group tools</h3>
+      <p class="small">Open a group, then use Invite to add another registered MUGS device by token.</p>
+      <button onclick="inviteToCurrentGroup()">Invite device</button>
+    </div>
+    <div class="card">
+      <h3>Network log</h3>
+      <div id="log" class="log"></div>
+    </div>
+  </aside>
 </div>
-<div class="modal" id="modal"><div class="dialog">
- <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Network Diagnostics</h2><button class="navbtn" id="closeDiag">×</button></div>
- <p class="muted">This test does not bypass network controls. It reports exactly which permitted connection stage succeeds or fails.</p>
- <button class="add" id="runDiag">Run full test</button>
- <div class="log" id="log" style="margin-top:12px"></div>
+
+<div id="settingsModal" class="modal"><div class="modalbox">
+  <div class="modalhead"><h2>Profile & Network</h2><button onclick="closeModal('settingsModal')">✕</button></div>
+  <div class="form">
+    <label>Username<input id="nameInput" maxlength="32"></label>
+    <label>Device name<input id="deviceInput" maxlength="48"></label>
+    <label>Backend URL<input id="backendInput" placeholder="https://your-worker.workers.dev"></label>
+    <div class="actions">
+      <button onclick="saveSettings()">Save</button>
+      <button onclick="copyToken()">Copy device token</button>
+      <button onclick="resetToken()">Generate new token</button>
+    </div>
+    <p class="small">Your device token is a bearer credential. Treat it like a password. Anyone who has it can act as that device.</p>
+  </div>
 </div></div>
+
+<div id="debugModal" class="modal"><div class="modalbox">
+  <div class="modalhead"><h2>Connection diagnostics</h2><button onclick="closeModal('debugModal')">✕</button></div>
+  <div id="debugResults" class="log" style="max-height:none"></div>
+  <div class="actions" style="margin-top:10px"><button onclick="runDiagnostics()">Run tests</button><button onclick="connectNow()">Reconnect</button></div>
+</div></div>
+
 <script>
-const CONFIG={BACKEND_URL:"https://hidden-water-4bc4.percusionm1.workers.dev"}; state={device:null,room:"main",ws:null,connected:false,log:[]};
-const $=id=>document.getElementById(id);
-function log(msg,kind=""){const line=`[${new Date().toLocaleTimeString()}] ${msg}`;state.log.push(line);$("log").textContent=state.log.join("\n");}
-function token(){let x=localStorage.getItem("mugs_device_token");if(!x){const a=crypto.getRandomValues(new Uint32Array(2));x=`MUGS-${a[0].toString(36).slice(-4).toUpperCase()}-${a[1].toString(36).slice(-4).toUpperCase()}`;localStorage.setItem("mugs_device_token",x)}return x}
-function load(){let d=JSON.parse(localStorage.getItem("mugs_profile")||"null");if(!d)d={token:token(),name:"mug"};d.token=d.token||token();localStorage.setItem("mugs_profile",JSON.stringify(d));state.device=d;$("meName").textContent=d.name;$("meId").textContent=d.token;$("deviceToken").textContent=d.token}
-function render(msg){const el=document.createElement("div");el.className="msg";const av=document.createElement("div");av.className="avatar";const content=document.createElement("div");const meta=document.createElement("div");meta.className="meta";meta.innerHTML=`<span class="name"></span><span class="time"></span>`;meta.querySelector(".name").textContent=msg.name||"Unknown";meta.querySelector(".time").textContent=msg.time||"";const body=document.createElement("div");body.className="body";body.textContent=msg.text||"";content.append(meta,body);el.append(av,content);$("messages").append(el);$("messages").scrollTop=$("messages").scrollHeight}
-function setConn(text,ok=false){$("connection").textContent=text;$("quickStatus").textContent=text;$("presenceDot").className="dot"+(ok?" ok":"")}
-function wsUrl(){if(!CONFIG.BACKEND_URL||CONFIG.BACKEND_URL.startsWith("__"))return null;return CONFIG.BACKEND_URL.replace(/^http/,"ws")+"/ws?token="+encodeURIComponent(state.device.token)}
-function connect(){const u=wsUrl();if(!u){setConn("Backend not configured");return}log("Opening WebSocket…");try{state.ws=new WebSocket(u);state.ws.onopen=()=>{state.connected=true;setConn("Connected",true);log("WebSocket connected.")};state.ws.onmessage=e=>{try{const p=JSON.parse(e.data);if(p.type==="message")render(p.message)}catch(err){log("Received malformed server data.")}};state.ws.onerror=()=>{state.connected=false;setConn("WebSocket error");log("WebSocket error. Check backend URL, browser console, and network access.")};state.ws.onclose=e=>{state.connected=false;setConn("Disconnected");log(`WebSocket closed (code ${e.code}).`)}}catch(e){log("WebSocket creation failed: "+e.message)}}
-function send(text){if(!text)return;const msg={name:state.device.name,text,time:new Date().toLocaleTimeString()};render(msg);if(state.ws?.readyState===1)state.ws.send(JSON.stringify({type:"message",room:state.room,message:msg}));else log("Message shown locally; backend connection is not active.")}
-$("send").onclick=()=>{send($("message").value.trim());$("message").value=""};$("message").onkeydown=e=>{if(e.key==="Enter")$("send").click()};$("fileBtn").onclick=()=>$("file").click();$("file").onchange=()=>{const f=$("file").files[0];if(f){if(f.size>5*1024*1024){log("File is over the starter 5 MB client limit.");return}send(`Shared file: ${f.name} (${Math.ceil(f.size/1024)} KB)`)}};
-$("addFriend").onclick=()=>{const t=$("friendToken").value.trim().toUpperCase();if(!/^MUGS-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(t)){log("Invalid MUGS token format.");return}if(state.ws?.readyState===1){state.ws.send(JSON.stringify({type:"friend_request",target:t}));log("Friend request sent to "+t)}else log("Cannot send friend request while disconnected.")};
-$("diagBtn").onclick=()=>{$("modal").classList.add("open");$("log").textContent=state.log.join("\n")};$("closeDiag").onclick=()=>{$("modal").classList.remove("open")};
-$("runDiag").onclick=async()=>{state.log=[];log("MUGS diagnostic started.");log("1. JavaScript: OK");log("2. Secure context: "+(location.protocol==="https:"?"OK":"FAIL — host this site over HTTPS"));log("3. WebSocket API: "+("WebSocket"in window?"OK":"FAIL"));log("4. Device token: "+(state.device?.token?"OK":"FAIL"));if(!CONFIG.BACKEND_URL||CONFIG.BACKEND_URL.startsWith("__")){log("5. Backend URL: FAIL — configure __BACKEND_URL__ in index.html.");return}log("5. Backend URL configured: OK");try{const r=await fetch(CONFIG.BACKEND_URL+"/health",{cache:"no-store"});log("6. HTTPS backend: "+(r.ok?"OK":"FAIL ("+r.status+")"));const j=await r.json();log("7. Backend response: "+(j.ok?"OK":"FAIL"));}catch(e){log("6. HTTPS backend: FAIL — "+e.message);log("7. WebSocket cannot be meaningfully tested until HTTPS backend is reachable.")}};
-load();connect();
+const STORAGE='mugs_free_v2';
+const state={token:'',profile:{name:'mug',device:'Browser Device'},backend:'',room:'main',groups:[],ws:null,connected:false,seq:0};
+
+function $(id){return document.getElementById(id)}
+function log(s){const t=new Date().toLocaleTimeString();$('log').textContent=(`[${t}] ${s}\n`+$('log').textContent).slice(0,12000)}
+function saveLocal(){localStorage.setItem(STORAGE,JSON.stringify({token:state.token,profile:state.profile,backend:state.backend}))}
+function loadLocal(){
+  try{const x=JSON.parse(localStorage.getItem(STORAGE)||'{}');state.token=x.token||'';state.profile={...state.profile,...(x.profile||{})};state.backend=x.backend||''}catch{}
+  if(!state.token)state.token=crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','');
+  $('username').textContent=state.profile.name;$('deviceName').textContent=state.profile.device;$('tokenShort').textContent=state.token.slice(0,8)+'…';
+}
+function apiBase(){return state.backend.replace(/\/+$/,'')}
+function wsBase(){return apiBase().replace(/^http:/,'ws:').replace(/^https:/,'wss:')}
+function setStatus(text,type){$('status').textContent=text;$('dot').className='dot '+(type||'warn')}
+function addMessage(m,system=false){
+  const d=document.createElement('div');d.className='msg'+(system?' system':'');
+  if(system)d.textContent=m;else d.innerHTML=`<div class="meta">${escapeHtml(m.name||'unknown')} · ${new Date(m.ts||Date.now()).toLocaleTimeString()}</div><div class="body">${escapeHtml(m.text||'')}</div>`;
+  $('messages').appendChild(d);$('messages').scrollTop=$('messages').scrollHeight;
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function api(path,options={}){
+  if(!apiBase())throw new Error('Backend URL is not configured.');
+  const headers={'Content-Type':'application/json','X-MUGS-Token':state.token,...(options.headers||{})};
+  const r=await fetch(apiBase()+path,{...options,headers});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(data.error||`HTTP ${r.status}`);
+  return data;
+}
+async function register(){
+  if(!apiBase()){setStatus('Backend not configured','warn');return false}
+  try{await api('/api/register',{method:'POST',body:JSON.stringify({name:state.profile.name,device:state.profile.device})});return true}
+  catch(e){log('Register failed: '+e.message);setStatus('Backend error','bad');return false}
+}
+async function connectNow(){
+  if(!apiBase()){setStatus('Set backend URL','warn');openSettings();return}
+  if(state.ws){try{state.ws.close()}catch{}}
+  setStatus('Registering…','warn');log('Starting connection');
+  if(!(await register()))return;
+  const url=wsBase()+'/ws?room='+encodeURIComponent(state.room)+'&token='+encodeURIComponent(state.token);
+  try{
+    const ws=new WebSocket(url);state.ws=ws;
+    ws.onopen=async()=>{state.connected=true;setStatus('Connected','ok');log('WebSocket connected');await loadHistory();};
+    ws.onmessage=e=>{try{const m=JSON.parse(e.data);handleServer(m)}catch{log('Received invalid server message')}};
+    ws.onerror=()=>{state.connected=false;setStatus('WebSocket error','bad');log('WebSocket error')};
+    ws.onclose=()=>{state.connected=false;setStatus('Disconnected','bad');log('WebSocket closed')};
+  }catch(e){setStatus('Connection failed','bad');log('Connect exception: '+e.message)}
+}
+function handleServer(m){
+  if(m.type==='ready'){addMessage(`Connected to ${m.room}. Online: ${m.online}`,true);return}
+  if(m.type==='message'){addMessage(m);return}
+  if(m.type==='presence'){log(`${m.name} ${m.online?'joined':'left'} ${m.room}`);return}
+  if(m.type==='error'){addMessage('Server error: '+m.error,true);log('Server error: '+m.error);return}
+  if(m.type==='pong')return;
+}
+async function loadHistory(){
+  try{
+    const d=await api('/api/history?room='+encodeURIComponent(state.room)+'&limit=50');
+    $('messages').innerHTML='';(d.messages||[]).forEach(addMessage);
+    addMessage(`Loaded ${d.messages?.length||0} recent messages.`,true);
+  }catch(e){log('History failed: '+e.message)}
+}
+function sendMessage(){
+  const input=$('messageInput'),text=input.value.trim();if(!text)return;
+  if(!state.ws||state.ws.readyState!==WebSocket.OPEN){addMessage('Not connected. Check Diagnostics.',true);return}
+  state.ws.send(JSON.stringify({type:'message',text,clientId:++state.seq}));input.value='';
+}
+async function selectRoom(room){
+  state.room=room;$('roomTitle').textContent='# '+room;$('messages').innerHTML='';
+  document.querySelectorAll('.channel').forEach(x=>x.classList.remove('active'));
+  if(room==='main')$('mainChannel').classList.add('active');
+  else{const el=[...document.querySelectorAll('.channel')].find(x=>x.dataset.room===room);if(el)el.classList.add('active')}
+  await connectNow();
+}
+async function refreshGroups(){
+  if(!apiBase())return;
+  try{const d=await api('/api/groups');state.groups=d.groups||[];renderGroups()}catch(e){log('Groups failed: '+e.message)}
+}
+function renderGroups(){
+  const box=$('groupList');box.innerHTML='';
+  state.groups.forEach(g=>{
+    const d=document.createElement('div');d.className='channel';d.dataset.room=g.id;
+    d.textContent='# '+g.name;d.onclick=()=>selectRoom(g.id);box.appendChild(d)
+  })
+}
+async function newGroup(){
+  const name=prompt('Group name?');if(!name)return;
+  try{const d=await api('/api/groups',{method:'POST',body:JSON.stringify({name})});state.groups.push(d.group);renderGroups();await selectRoom(d.group.id)}
+  catch(e){alert('Could not create group: '+e.message)}
+}
+async function inviteToCurrentGroup(){
+  if(state.room==='main'){alert('Open a group first.');return}
+  const token=prompt('Paste the other registered device token:');if(!token)return;
+  try{await api('/api/groups/'+encodeURIComponent(state.room)+'/members',{method:'POST',body:JSON.stringify({token})});alert('Device added to the group.')}
+  catch(e){alert('Invite failed: '+e.message)}
+}
+function openSettings(){$('nameInput').value=state.profile.name;$('deviceInput').value=state.profile.device;$('backendInput').value=state.backend;openModal('settingsModal')}
+function saveSettings(){state.profile.name=$('nameInput').value.trim()||'mug';state.profile.device=$('deviceInput').value.trim()||'Browser Device';state.backend=$('backendInput').value.trim().replace(/\/+$/,'');saveLocal();loadLocal();closeModal('settingsModal');connectNow();refreshGroups()}
+function resetToken(){if(confirm('Generate a new device token? Your old token will no longer identify this browser.')){state.token=crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','');saveLocal();loadLocal();connectNow()}}
+async function copyToken(){try{await navigator.clipboard.writeText(state.token);alert('Token copied. Keep it private.')}catch{alert(state.token)}}
+function openDebug(){openModal('debugModal');runDiagnostics()}
+function openModal(id){$(id).classList.add('open')}function closeModal(id){$(id).classList.remove('open')}
+async function runDiagnostics(){
+  const out=$('debugResults');out.textContent='';
+  const tests=[['JavaScript',true,'Running JavaScript'],['Secure context',location.protocol==='https:'||location.hostname==='localhost',location.protocol],['WebSocket API','WebSocket'in window,'WebSocket'in window?'Available':'Missing'],['Token',!!state.token,state.token?'Present':'Missing'],['Backend URL',!!apiBase(),apiBase()||'Not configured']];
+  tests.forEach(x=>out.textContent+=`${x[1]?'PASS':'FAIL'} — ${x[0]} — ${x[2]}\n`);
+  if(apiBase()){try{const t=performance.now(),d=await api('/health');out.textContent+=`PASS — Health — ${Math.round(performance.now()-t)}ms — ${JSON.stringify(d)}\n`}catch(e){out.textContent+=`FAIL — Health — ${e.message}\n`}}
+  out.textContent+=`\nBrowser: ${navigator.userAgent}\nRoom: ${state.room}\n`;
+}
+loadLocal();addMessage('MUGS Free-Plan client ready.',true);log('Client initialized');
+if(state.backend){refreshGroups();connectNow()}
 </script>
 </body>
 </html>

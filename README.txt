@@ -1,83 +1,131 @@
-# MUGS Chat Network — no-terminal starter
+MUGS CHAT NETWORK — FREE-PLAN EDITION v2
+============================================
 
-This package contains a browser client and a Cloudflare Worker backend.
+This package is designed around the current Cloudflare Workers Free plan:
+- GitHub Pages for the browser client
+- Cloudflare Worker for the API/WebSocket entry point
+- SQLite-backed Durable Objects for persistent state
+- Hibernatable WebSockets to reduce idle duration usage
+- No terminal required for the basic browser/dashboard workflow
 
-## What is included
+FEATURES
+--------
+* Automatic main room
+* Persistent device token
+* Device/profile registration
+* Real-time WebSocket chat
+* Persistent recent message history
+* User-created groups
+* Group membership/invites by device token
+* Friend system by device token
+* Online/offline presence
+* Reconnect and diagnostics
+* Server-side message limits
+* Automatic trimming of old room messages
+* Separate Durable Object instances for rooms
 
-- Automatic MUGS device token
-- Main server / global room
-- WebSocket real-time messaging
-- Basic friend-request packet
-- Network diagnostics
-- HTTPS health check
-- Responsive Discord-style UI
-- No local computer needs to stay on
+FREE-PLAN DESIGN
+----------------
+The code intentionally avoids paid-only Durable Object storage modes and is
+built for SQLite-backed Durable Objects.
 
-## Important
+Cloudflare's current documentation should be checked before deployment because
+limits can change. This version is designed to stay within the Free-plan
+architecture, not to bypass limits.
 
-The client intentionally does NOT attempt to bypass a school firewall, device-management policy, proxy, or filtering system. If the network blocks WebSockets, the Diagnostics panel will report that connection stage as failed.
+NO-TERMINAL SETUP
+-----------------
+A) GITHUB
+1. Open your GitHub repository.
+2. Upload INDEX.HTML to the repository root.
+3. Commit it.
+4. Repository Settings -> Pages.
+5. Source: Deploy from a branch.
+6. Branch: main.
+7. Folder: / (root).
+8. Save.
+9. Wait for the GitHub Pages URL.
 
-## No-terminal deployment
+B) CLOUDFLARE
+1. Sign in to the Cloudflare dashboard.
+2. Open Workers & Pages.
+3. Create a Worker.
+4. Open the browser-based code editor/Quick Editor.
+5. Replace the generated code with WORKER.JS.
+6. Create the Durable Object binding:
+     Binding name: MUGS_DO
+     Class name: MUGS_DO
+   Use the SQLite-backed Durable Object option.
+7. Apply the SQLite migration for class MUGS_DO if the dashboard asks for it.
+8. Deploy.
+9. Copy the HTTPS workers.dev URL.
 
-### 1. Host the client
+WRANGLER.JSON
+-------------
+WRANGLER.JSON documents the exact binding and SQLite migration:
+  MUGS_DO -> MUGS_DO
+  migration tag v1 -> new SQLite class MUGS_DO
 
-You can put `index.html` on a static HTTPS host such as GitHub Pages.
+The dashboard may present these steps differently than Wrangler. Do not pay
+for a plan just because the dashboard wording is different.
 
-### 2. Create the backend in Cloudflare Dashboard
+C) CONNECT THE WEBSITE
+1. Open your GitHub Pages MUGS site.
+2. Open Settings (gear).
+3. Paste the Cloudflare Worker HTTPS URL.
+4. Save.
+5. The browser creates/registers its device token automatically.
+6. It connects to the main room.
 
-Create a Worker and paste the contents of `worker.js`.
+TEST THE BACKEND
+----------------
+Open these in a browser after deployment:
 
-Create a Durable Object binding:
+  https://YOUR-WORKER.workers.dev/health
+  https://YOUR-WORKER.workers.dev/debug
 
-Name: `CHAT_ROOM`
-Class name: `CHAT_ROOM`
+The first should return JSON with "ok": true.
+The second should report WebSocket and SQLite Durable Object support.
 
-Use the SQLite-backed Durable Object migration shown in `wrangler.json`.
+DIAGNOSTICS
+-----------
+Inside MUGS:
+  Gear -> Diagnostics
 
-Cloudflare's dashboard UI changes over time, so use the current Workers/Durable Objects setup screens and make the binding names exactly match.
+If /health works but WebSocket fails:
+  The Worker is reachable. Check the Durable Object binding, WebSocket
+  endpoint, or the network blocking WebSockets.
 
-### 3. Get your Worker URL
+If /health fails:
+  Check the Worker URL, deployment, or network access.
 
-It will look like:
+SECURITY
+--------
+The device token is a bearer credential. Keep it private.
+Anyone who gets the token can act as that device.
 
-https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev
+This starter intentionally avoids email/password accounts to keep setup simple.
+A future version can add stronger account authentication and encryption.
 
-### 4. Configure the client
+LIMITATIONS
+-----------
+* This is not a complete Discord clone.
+* Free-plan quotas still apply.
+* A group owner currently invites members by pasting their registered device
+  token.
+* No end-to-end encryption yet.
+* No large-file storage/transfer in this version.
+* No moderation dashboard yet.
+* Losing a device token means that browser cannot recover the old identity.
+* Network/device management systems can still block Cloudflare or WebSockets.
+  This software does not attempt to bypass such restrictions.
 
-Open `index.html` in a text editor and replace:
-
-__BACKEND_URL__
-
-with your Worker URL.
-
-Example:
-
-const CONFIG={BACKEND_URL:"https://mugs-chat.example.workers.dev"};
-
-Then upload the updated index.html to your static host.
-
-### 5. Test
-
-Open the website and click the gear button.
-
-Run the full diagnostics.
-
-Test first on two ordinary browsers/devices that you control. Then test on the Chromebook.
-
-## Next upgrades
-
-This starter intentionally keeps the first backend small so failures are easy to diagnose. The next version can add:
-
-- persistent accounts
-- friend requests stored in Durable Objects/SQLite
-- group creation and membership
-- multiple rooms
-- message history
-- authenticated sessions
-- encrypted application payloads
-- resumable file transfer
-- presence
-- moderation/admin controls
-- WebRTC direct transfer where permitted
-
-Do not use a MUGS device token as a password. Anyone who knows a token should not automatically be able to impersonate the owner; authentication should be added before treating the system as private.
+FREE-PLAN EFFICIENCY
+--------------------
+* Hibernatable WebSockets are used so idle Durable Objects can hibernate.
+* No polling loop.
+* 2,000-character message cap.
+* 50-message client history load.
+* 500-message server retention per room.
+* Separate room Durable Objects.
+* Lightweight JSON protocol.
