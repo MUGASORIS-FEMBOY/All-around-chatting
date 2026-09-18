@@ -44,8 +44,7 @@ main{display:flex;flex-direction:column;min-width:0}.top{height:54px;border-bott
  <div class="log" id="log" style="margin-top:12px"></div>
 </div></div>
 <script>
-const CONFIG={BACKEND_URL:"__BACKEND_URL__"};
-const state={device:null,room:"main",ws:null,connected:false,log:[]};
+const CONFIG={BACKEND_URL:"https://hidden-water-4bc4.percusionm1.workers.dev"}; state={device:null,room:"main",ws:null,connected:false,log:[]};
 const $=id=>document.getElementById(id);
 function log(msg,kind=""){const line=`[${new Date().toLocaleTimeString()}] ${msg}`;state.log.push(line);$("log").textContent=state.log.join("\n");}
 function token(){let x=localStorage.getItem("mugs_device_token");if(!x){const a=crypto.getRandomValues(new Uint32Array(2));x=`MUGS-${a[0].toString(36).slice(-4).toUpperCase()}-${a[1].toString(36).slice(-4).toUpperCase()}`;localStorage.setItem("mugs_device_token",x)}return x}
